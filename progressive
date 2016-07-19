@@ -1,0 +1,58 @@
+#!/bin/bash
+# progressive - sort input lines progressively
+#
+# Copyright (c) 2016 ALSENET - http://alsenet.com
+#
+# Based on the work of the FOXEL project - http://foxel.ch
+#
+# Author(s):
+#   Rurik Bugdanov <rurik.bugdanov@alsenet.com>
+#   Luc Deschenaux <luc.deschenaux@foxel.ch>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+main() {
+  TMPDIR=/dev/shm
+  TMP=$(mktemp)
+  TMP2=$(mktemp)
+  argc=$(cat | tee $TMP | wc -l)
+  last=$((argc - 1))
+  [ $last -eq 0 ] && last=1
+  step=$(expr $argc / 2)
+  [ $step -eq 0 ] && step=1
+  while true ; do
+    for (( i=0; i<$argc ; i+=step )) ; do
+      grep -q -e ^${i}$ $TMP2 && continue
+      echo $i >> $TMP2
+      tail -n+$((i+1)) $TMP | head -n1
+    done
+    if [ -n "$last" ] && ! grep -q ^${last}$ $TMP2 ; then
+      echo $last >> $TMP2
+      tail -n+$((last+1)) $TMP | head -n1
+      last=
+    fi
+    [ $step -eq 1 ] && break
+    ((step/=2))
+  done
+  rm $TMP
+  rm $TMP2
+}
+
+if [ -n "$1" ] ; then
+  cat "$1" | main
+else
+  main
+fi
